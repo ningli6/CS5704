@@ -1,0 +1,46 @@
+import scrapy
+import re
+
+from CS5704.models import BugReport
+from CS5704.models import Patch
+
+class BugzillaSpider(scrapy.Spider):
+    name = "bugzilla"
+    allowed_domains = ["bugzilla.mozilla.org"]
+    start_urls = [
+        "https://bugzilla.mozilla.org/buglist.cgi?keywords=perf&keywords_type=allwords&resolution=FIXED&query_format=advanced&product=Firefox"
+    ]
+
+    def parse(self, response):
+        for href in response.css(".bz_bugitem .first-child a::attr(href)"):
+            url = response.urljoin(href.extract())
+            yield scrapy.Request(url, callback=self.parse_bug_contents)
+
+    def parse_bug_contents(self, response):
+        bug = BugReport()
+        bug['Url'] = response.url
+        # [4:] needed for trim
+        bug['BugId'] = response.xpath('//div[@class="bz_alias_short_desc_container edit_form"]/a/b/text()').extract()[0][4:]
+        bug['Title'] = response.xpath('//div[@class="bz_alias_short_desc_container edit_form"]/span[@id="summary_alias_container"]/span/text()').extract()[0]
+        # replace(' ', '').replace('\n', ' ') needed for trim
+        bug['Importance'] = response.xpath('//td[@id="bz_show_bug_column_1"]/table//tr[11]/td/text()').extract()[0].replace(' ', '').replace('\n', ' ')
+        # replace(' ', '').replace('\n', '').split(',') needed for trim
+        bug['Keywords'] = response.xpath('//td[@id="bz_show_bug_column_1"]/table//tr[3]/td/text()').extract()[0].replace(' ', '').replace('\n', '').split(',')
+        # [:-4] needed for trim
+        bug['ReportTime'] = response.xpath('//td[@id="bz_show_bug_column_2"]/table//tr[1]/td/text()').extract()[0][:-4]
+        bug['NumberOfComments'] = len(response.xpath('//div[@class="bz_comment"]|//div[@class="bz_comment bz_first_comment"]'))
+        bug['NumberOfDevelopers'] = len(set(response.xpath('(//div[@class="bz_comment"]|//div[@class="bz_comment bz_first_comment"])//span[@class="fn"]/text()').extract()))
+        bug['NumberOfPatches'] = len(response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]'))
+        
+        patches = []
+        for patchSelector in response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]'):
+            patch = Patch()
+            patch['PatchTitle'] = patchSelector.xpath('td/a/b/text()').extract()[0]
+            # re is need to trim size
+            rawSize = patchSelector.xpath('td/span[@class="bz_attach_extra_info"]/text()').extract()[0]
+            patch['PatchSize'] = re.sub('[^0-9\.GMKB ]', '', rawSize).strip()
+            patch['PatchTime'] = patchSelector.xpath('td/span[@class="bz_attach_extra_info"]/a/text()').extract()[0]
+            patches.append(patch)
+        bug['Patches'] = patches
+        
+        yield bug
