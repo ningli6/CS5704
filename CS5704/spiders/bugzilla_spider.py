@@ -15,6 +15,7 @@ class BugzillaSpider(scrapy.Spider):
         for href in response.css(".bz_bugitem .first-child a::attr(href)"):
             url = response.urljoin(href.extract())
             yield scrapy.Request(url, callback=self.parse_bug_contents)
+            # if href.extract() == 'show_bug.cgi?id=399476':
 
     def parse_bug_contents(self, response):
         bug = BugReport()
@@ -30,17 +31,41 @@ class BugzillaSpider(scrapy.Spider):
         bug['ReportTime'] = response.xpath('//td[@id="bz_show_bug_column_2"]/table//tr[1]/td/text()').extract()[0][:-4]
         bug['NumberOfComments'] = len(response.xpath('//div[@class="bz_comment"]|//div[@class="bz_comment bz_first_comment"]'))
         bug['NumberOfDevelopers'] = len(set(response.xpath('(//div[@class="bz_comment"]|//div[@class="bz_comment bz_first_comment"])//span[@class="fn"]/text()').extract()))
-        bug['NumberOfPatches'] = len(response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]'))
-        
-        patches = []
-        for patchSelector in response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]'):
-            patch = Patch()
-            patch['PatchTitle'] = patchSelector.xpath('td/a/b/text()').extract()[0]
-            # re is need to trim size
-            rawSize = patchSelector.xpath('td/span[@class="bz_attach_extra_info"]/text()').extract()[0]
-            patch['PatchSize'] = re.sub('[^0-9\.GMKB ]', '', rawSize).strip()
-            patch['PatchTime'] = patchSelector.xpath('td/span[@class="bz_attach_extra_info"]/a/text()').extract()[0]
-            patches.append(patch)
-        bug['Patches'] = patches
-        
-        yield bug
+        # count number of patches
+        numOfPatches = len(response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]'))
+        bug['NumberOfPatches'] = numOfPatches
+        bug['Patches'] = []
+        if numOfPatches == 0:
+            yield bug
+        else:
+            patchurl = response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]')[0].xpath('td[@class="bz_attach_actions"]/a/@href').extract()[1]
+            request = scrapy.Request(response.urljoin(patchurl), callback=self.parse_patch_content)
+            request.meta['bug'] = bug
+            request.meta['selectors'] = response.xpath('//tr[@class="bz_contenttype_text_plain bz_patch"]')
+            yield request
+
+
+    def parse_patch_content(self, response):
+        bug = response.meta['bug']
+        selectors = response.meta['selectors']
+        patchSelector = selectors[0]
+        patch = Patch()
+        patch['PatchTitle'] = patchSelector.xpath('td/a/b/text()').extract()[0]
+        # re is need to trim size, need to consider bytes
+        rawSize = patchSelector.xpath('td/span[@class="bz_attach_extra_info"]/text()').extract()[0]
+        patch['PatchSize'] = re.sub('[^0-9\.GMKB ]', '', rawSize).strip()
+        patch['PatchTime'] = patchSelector.xpath('td/span[@class="bz_attach_extra_info"]/a/text()').extract()[0]
+        patchurl = patchSelector.xpath('td[@class="bz_attach_actions"]/a/@href').extract()[1]
+        patch['PatchUrl'] = patchurl
+        patch['DiffUrl'] = response.url
+        bug['Patches'].append(patch)
+        selectors = selectors[1:]
+        if len(selectors) == 0:
+            yield bug
+        else:
+            patchurl = selectors[0].xpath('td[@class="bz_attach_actions"]/a/@href').extract()[1]
+            request = scrapy.Request(response.urljoin(patchurl), callback=self.parse_patch_content)
+            request.meta['bug'] = bug
+            request.meta['selectors'] = selectors
+            yield request
+
