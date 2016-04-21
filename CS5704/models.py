@@ -31,3 +31,11 @@ class Patch(scrapy.Item):
 	PatchTime = scrapy.Field()
 	PatchUrl = scrapy.Field()
 	DiffUrl = scrapy.Field()
+	NumberOfFilesChanged = scrapy.Field()
+	Changes = scrapy.Field()
+
+class File(scrapy.Item):
+	FileName = scrapy.Field()
+	Added = scrapy.Field()
+	Deleted = scrapy.Field()
+

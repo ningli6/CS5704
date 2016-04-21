@@ -3,6 +3,7 @@ import re
 
 from CS5704.models import BugReport
 from CS5704.models import Patch
+from CS5704.models import File
 
 class BugzillaSpider(scrapy.Spider):
     name = "bugzilla"
@@ -58,6 +59,21 @@ class BugzillaSpider(scrapy.Spider):
         patchurl = patchSelector.xpath('td[@class="bz_attach_actions"]/a/@href').extract()[1]
         patch['PatchUrl'] = patchurl
         patch['DiffUrl'] = response.url
+        patch['NumberOfFilesChanged'] = len(response.xpath('//table[@class="file_table"]'))
+        files = []
+        for fileSelector in response.xpath('//table[@class="file_table"]'):
+            changedFile = File()
+            fileSummary = fileSelector.xpath('thead//td[@class="file_head"]/text()').extract()[0]
+            fileSummaries = fileSummary.replace(" ", "").split('\n')
+            changedFile['FileName'] = fileSummaries[0]
+            numbers = fileSummaries[1].split(u'\xa0')
+            for num in numbers:
+                if '-' in num:
+                    changedFile['Deleted'] = num[num.index('-') + 1:]
+                if '+' in num:
+                    changedFile['Added'] = num[num.index('+') + 1:]
+            files.append(changedFile)
+        patch['Changes'] = files
         bug['Patches'].append(patch)
         selectors = selectors[1:]
         if len(selectors) == 0:
