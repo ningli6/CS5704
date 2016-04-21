@@ -7,8 +7,19 @@ from CS5704.models import File
 class BugzillaSpider(scrapy.Spider):
     name = "bugzilla"
     allowed_domains = ["bugzilla.mozilla.org"]
-    start_urls = [ # starting url: fixed, perf, firfox
-        "https://bugzilla.mozilla.org/buglist.cgi?keywords=perf&keywords_type=allwords&resolution=FIXED&query_format=advanced&product=Firefox"
+    start_urls = [
+        # firefox, fixed, perf
+        # "https://bugzilla.mozilla.org/buglist.cgi?keywords=perf&keywords_type=allwords&resolution=FIXED&query_format=advanced&product=Firefox"
+        # firefox & firefox for android & firefox for ios & firefox for metro, fixed, perf
+        # "https://bugzilla.mozilla.org/buglist.cgi?keywords=perf&keywords_type=allwords&resolution=FIXED&query_format=advanced&product=Firefox&product=Firefox%20for%20Android&product=Firefox%20for%20iOS&product=Firefox%20for%20Metro"
+        # firefox, fixed, all 1000
+        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
+        # firefox for android, fixed, all 1000
+        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Android&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
+        # firefox for ios, fixed, all, 1000
+        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20iOS&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
+        # firefox for metro, fixed, all, 1000
+        "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Metro&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
     ]
 
     def parse(self, response):
