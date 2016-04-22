@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 
 # Usage: python stats.py [report.json]
-
+# test line
 # len
 def numberOfBugs(data):
 	return len(data)
