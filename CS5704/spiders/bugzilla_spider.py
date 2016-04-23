@@ -21,14 +21,55 @@ class BugzillaSpider(scrapy.Spider):
         # firefox for metro, fixed, all, 1000
         "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Metro&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
     ]
-
+    vector_perf=["freeze","lag","slow"]
+    vector_nonperf=["wrong","crash","defect"]
+    
+    
+    def init(self,d):
+        for word in self.vector_perf+self.vector_nonperf:
+            d[word]=0
+    def isperf(self,d):
+        ans=0
+        for a in self.vector_perf:
+            ans+=d[a]
+        for a in self.vector_nonperf:
+            ans-=d[a]
+        return ans
+    
     def parse(self, response):
+        
         for href in response.css(".bz_bugitem .first-child a::attr(href)"):
             url = response.urljoin(href.extract())
-            yield scrapy.Request(url, callback=self.parse_bug_contents)
-
+            
+            request = scrapy.Request(url, callback=self.parse_bug_content_wordbag)
+            request.meta["isP"]=0;
+            yield request
+            
+            
+    def parse_bug_content_wordbag(self,response):
+        bug = BugReport()
+        # content of comments
+        bug['ContentOfComments'] = response.xpath('//pre[@class="bz_comment_text"]').extract()
+        d={}
+        self.init(d)
+        for s in bug['ContentOfComments']: 
+            for word in self.vector_perf+self.vector_nonperf:
+                i=0
+                i=s.find(word,i)
+                while(i>=0):
+                    d[word]+=1
+                    i=s.find(word,i+1)
+        isP=self.isperf(d)          
+        if(isP<=0):
+            return
+        print d
+        response.meta["isP"]=isP
+        return self.parse_bug_contents(response);
+    
     def parse_bug_contents(self, response):
         bug = BugReport()
+        # is a performance bug
+        bug['isPerf']=response.meta["isP"]
         # bug url
         bug['Url'] = response.url
         # bug id, [4:] needed for trim
@@ -43,6 +84,7 @@ class BugzillaSpider(scrapy.Spider):
         bug['ReportTime'] = response.xpath('//td[@id="bz_show_bug_column_2"]/table//tr[1]/td/text()').extract()[0][:-4]
         # number of comments
         bug['NumberOfComments'] = len(response.xpath('//div[@class="bz_comment"]|//div[@class="bz_comment bz_first_comment"]'))
+        
         # number of developers
         bug['NumberOfDevelopers'] = len(set(response.xpath('(//div[@class="bz_comment"]|//div[@class="bz_comment bz_first_comment"])//span[@class="fn"]/text()').extract()))
         # count number of patches

@@ -4,10 +4,14 @@
 import json
 import sys
 import os
+import glob
+#excel python model
+import xlsxwriter
+
 from datetime import datetime
 
 # Usage: python stats.py [report.json]
-# test line
+
 # len
 def numberOfBugs(data):
 	return len(data)
@@ -115,45 +119,92 @@ def avg_time_per_bug(data):
 		mins += (diff.days * 24 * 60 + diff.seconds / 60) / count
 	return str(mins / 1440) + ' Days, ' + str(mins % 1440 / 60) + ' Hours, ' + str((mins % 1440) % 60) + ' Minutes'
 
-if len(sys.argv) < 2:
-	print 'Error: missing json files'
-	print 'Usage: python stats.py [report.json]'
-	sys.exit()
+def generate_stats():
+    workbook = xlsxwriter.Workbook('Stats.xlsx')
+    worksheet = workbook.add_worksheet()
+    tags=['Number of bugs:','Number of bugs with patch:','Average number of comments per bug:','Max number of comments per bug:','Average number of patches per bug:','Max number of patches per bug:', 'Average number of developers per bug:','Max number of developers per bug:','Average lines of code added per bug:', 'Average lines of code added for patched bugs:', 'Average lines of code deleted per bug:', 'Average lines of code deleted for patched bugs:', 'Average time per bug:' ]
+    row = 1
+    col = 0
+    for tag in tags:
+        worksheet.write(row, col,tag)
+        row+=1
+    col+=1
+    
+    for filename in glob.glob('Data/*.json'):
+        row=0
+        r=[None]*14;
+        r[13]=filename[5:-5]
+        
+        raw_json_data = open(filename)
+        data = json.load(raw_json_data)
+        # print 'Number of bugs:', 
+        r[0]=numberOfBugs(data)
+		# print 'Number of bugs with patch:', 
+        r[1]=numberOfBugsWithPatch(data)
+		# print 'Average number of comments per bug:', 
+        r[2]=avg_comments(data)
+		# print 'Max number of comments per bug:', 
+        r[3]=max_comments(data)
+		# print 'Average number of patches per bug:', 
+        r[4]=avg_patches(data)
+		# print 'Max number of patches per bug:', 
+        r[5]=max_patches(data)
+		# print 'Average number of developers per bug:', 
+        r[6]=avg_developers(data)
+		# print 'Max number of developers per bug:', 
+        r[7]=max_developers(data)
+		# print 'Average lines of code added per bug:', 
+        r[8]=avg_code_added_per_bug(data)
+		# print 'Average lines of code added for patched bugs:', 
+        r[9]=avg_code_added_per_bug_with_patch(data)
+		# print 'Average lines of code deleted per bug:', 
+        r[10]=avg_code_deleted_per_bug(data)
+		# print 'Average lines of code deleted for patched bugs:', 
+        r[11]=avg_code_deleted_per_bug_with_patch(data)
+		# print 'Average time per bug:', 
+        r[12]=avg_time_per_bug(data)
+        
+        for i in range(len(r)):
+            worksheet.write(row,col,r[(i-1)%14])
+            row+=1
+        col+=1
+        
+        
+        
+    workbook.close()
+        
+generate_stats()
 
-files = sys.argv[1:]
-for f in files:
-	try:
-		path = os.getcwd() + '/Data/' + f
-		print path
-		raw_json_data = open(path)
-		data = json.load(raw_json_data)
-		print 'Extracting data from ', f, '...'
-		print 'Stats:'
-		# number of bugs
-		print 'Number of bugs:', numberOfBugs(data)
-		# number of bugs with patch:
-		print 'Number of bugs with patch:', numberOfBugsWithPatch(data)
-		# average number of comments
-		print 'Average number of comments per bug:', avg_comments(data)
-		# max number of comments
-		print 'Max number of comments per bug:', max_comments(data)
-		# average number of patches
-		print 'Average number of patches per bug:', avg_patches(data)
-		# max number of patches
-		print 'Max number of patches per bug:', max_patches(data)
-		# average number of developers
-		print 'Average number of developers per bug:', avg_developers(data)
-		# max number of developers
-		print 'Max number of developers per bug:', max_developers(data)
-		# average number of lines added per bug
-		print 'Average lines of code added per bug:', avg_code_added_per_bug(data)
-		# average number of lines added per bug with patch
-		print 'Average lines of code added for patched bugs:', avg_code_added_per_bug_with_patch(data)
-		# average number of lines deleted per bug
-		print 'Average lines of code deleted per bug:', avg_code_deleted_per_bug(data)
-		# average number of lines deleted per bug
-		print 'Average lines of code deleted for patched bugs:', avg_code_deleted_per_bug_with_patch(data)
-		# average time per bug
-		print 'Average time per bug:', avg_time_per_bug(data)
-	except Exception, e:
-		raise e
+ 
+
+    
+    
+# if len(sys.argv) < 2:
+	# print 'Error: missing json files'
+	# print 'Usage: python stats.py [report.json]'
+	# sys.exit()
+
+# files = sys.argv[1:]
+# for f in files:
+	# try:
+		# path = os.getcwd() + '/Data/' + f
+		# print path
+		# raw_json_data = open(path)
+		# data = json.load(raw_json_data)
+		# print 'Extracting data from ', f, '...'
+		# print 'Stats:'
+		# print 'Number of bugs:', numberOfBugs(data)
+		# print 'Number of bugs with patch:', numberOfBugsWithPatch(data)
+		# print 'Average number of comments per bug:', avg_comments(data)
+		# print 'Max number of comments per bug:', max_comments(data)
+		# print 'Average number of patches per bug:', avg_patches(data)
+		# print 'Max number of patches per bug:', max_patches(data)
+		# print 'Average number of developers per bug:', avg_developers(data)
+		# print 'Max number of developers per bug:', max_developers(data)
+		# print 'Average lines of code added per bug:', avg_code_added_per_bug(data)
+		# print 'Average lines of code added for patched bugs:', avg_code_added_per_bug_with_patch(data)
+		# print 'Average lines of code deleted per bug:', avg_code_deleted_per_bug(data)
+		# print 'Average lines of code deleted for patched bugs:', avg_code_deleted_per_ bug_with_patch(data)
+		# print 'Average time per bug:', avg_time_per_bug(data)
+	# except Exception, e:
+		# raise e
