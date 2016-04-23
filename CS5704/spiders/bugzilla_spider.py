@@ -13,13 +13,13 @@ class BugzillaSpider(scrapy.Spider):
         # firefox & firefox for android & firefox for ios & firefox for metro, fixed, perf
         # "https://bugzilla.mozilla.org/buglist.cgi?keywords=perf&keywords_type=allwords&resolution=FIXED&query_format=advanced&product=Firefox&product=Firefox%20for%20Android&product=Firefox%20for%20iOS&product=Firefox%20for%20Metro"
         # firefox, fixed, all 1000
-        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
+        "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=3000"
         # firefox for android, fixed, all 1000
-        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Android&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
+        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Android&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=3000"
         # firefox for ios, fixed, all, 1000
         # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20iOS&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
         # firefox for metro, fixed, all, 1000
-        "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Metro&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=1000"
+        # "https://bugzilla.mozilla.org/buglist.cgi?product=Firefox%20for%20Metro&query_format=advanced&resolution=FIXED&order=priority%2Cbug_severity&limit=3000"
     ]
     vector_perf=["freeze","lag","slow"]
     vector_nonperf=["wrong","crash","defect"]
@@ -60,7 +60,7 @@ class BugzillaSpider(scrapy.Spider):
                     d[word]+=1
                     i=s.find(word,i+1)
         isP=self.isperf(d)          
-        if(isP<=0):
+        if(isP >= 0):
             return
         print d
         response.meta["isP"]=isP
